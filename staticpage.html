@@ -1,0 +1,225 @@
+<html>
+	<head>
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+		<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular.min.js"></script>
+		<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/smoothness/jquery-ui.css" />
+		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
+
+		<script type="text/javascript">
+			function getPerson (personId) {
+				var person = null;
+				
+				$.ajax({
+					url: "/json/" + personId,
+					type: "GET",
+					success: function (data) {
+						person = data;
+					},
+					dataType: "json",
+					async: false
+				}); 
+				
+				return person;
+			}
+			
+			function savePerson(person) {
+				$.ajax({
+					url: "/json/" + person.personId,
+					type: "PUT",
+					contentType: "application/json",
+					data: JSON.stringify(person),
+					success: function (data) {
+						//alert (data.personId + " - " + data.name + " - " + data.age);
+					},
+					error: function(xhr, status, error) {
+					  alert(xhr.responseText);
+					},
+					dataType: "json"
+				}); 
+			}
+			
+			function deletePerson (personId) {
+				$.ajax({
+					url: "/json/" + personId,
+					type: "DELETE",
+					success: function (data) {
+						//alert(data);
+					},
+					dataType: "json",
+					async: false
+				});
+			}
+			
+			function yesodController ($scope) {
+				self = {};
+				
+				self.safeApply = function (fn) {
+					var phase = $scope.$root.$$phase;
+					
+					if (phase == '$apply' || phase == '$digest') {
+						if(fn && (typeof(fn) === 'function')) {
+							fn();
+						}
+					}
+					else {
+						$scope.$apply(fn);
+					}
+				};
+				
+				$scope.personCollection = [];
+				$scope.person = null;
+				
+				$scope.loadPersonCollection = function () {
+					var personCollection = getPersonCollection();
+					
+					self.safeApply(function () {
+						$scope.personCollection = personCollection;
+					});
+
+				};
+						
+				$scope.delete = function (id) {
+					deletePerson(id);
+					$scope.loadPersonCollection();
+				};
+				
+				$scope.loadPerson = function (personId) {
+					var person = getPerson(personId);
+					
+					self.safeApply(function () {
+						$scope.person = person;
+					});
+					
+					openArtiklDialog();
+				};
+				
+				$scope.save = function () {
+					savePerson($scope.person);
+					closeArtiklDialog();
+					$scope.loadPersonCollection();
+				};
+				
+				$scope.new = function () {
+					var person = {"personId": 0, "name": "", "age": 0};
+					
+					self.safeApply(function () {
+						$scope.person = person;
+					});
+					
+					openArtiklDialog();
+				};
+			}
+			
+			var ngControllerScope;
+			function getNgControllerScope() {
+				if (!ngControllerScope) {
+					ngControllerScope = angular.element($("#divYesodCtrl")).scope();
+				}
+				
+				return ngControllerScope;
+			}
+				
+			function getPersonCollection() {
+				var personCollection = null;
+				
+				$.ajax({
+					url: "/jsonl",
+					success: function (data) {
+						tmp = data;
+						//var scope = getNgControllerScope();	
+						//ngControllerScope.loadPersonCollection(data);
+					},
+					error: function(xhr, status, error) {
+					  alert(error);
+					},
+					dataType: "json",
+					async: false
+				}); 
+				
+				return (tmp);
+			}
+			
+			function closeArtiklDialog() {
+				$("#personDialog").dialog("close");
+			}
+			
+			function openArtiklDialog() {
+				$("#personDialog").dialog("open");
+			}
+				
+			$(document).ready(function () {
+				$("#personDialog").dialog({
+					modal: true,
+					width: "700px"
+				});
+				
+				closeArtiklDialog();
+				
+				var scope = getNgControllerScope();	
+				ngControllerScope.loadPersonCollection();
+			});
+		</script>
+	</head>
+	<body>
+		<input type="button" onclick="getPerson()" value="get" />
+		<br />
+		<br />
+		<br />
+
+		<div ng-app>
+			<div id="divYesodCtrl" ng-controller="yesodController">
+			
+				<div id="personDialog">
+					<table>
+						<tr>
+							<td>Name:</td>
+							<td>
+								<input ng-model="person.name" />
+							</td>
+							<td>Age:</td>
+							<td>
+								<input type="number" ng-model="person.age" />
+							</td>
+						</tr>
+					</table>
+					<input type="button" ng-click="save();" value="put" />
+				</div>
+				
+				<input type="button" ng-click="new();" value="new" />
+				<br />
+				<br />
+				
+				<table>
+					<thead>
+						<tr>
+							<th>PersonId</th>
+							<th>Name</th>
+							<th>Age</th>
+							<th></th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody ng-repeat="person in personCollection">
+						<tr>
+							<td>
+								{{ person.personId }}
+							</td>
+							<td>
+								{{ person.name }}
+							</td>
+							<td>
+								{{ person.age }}
+							</td>
+							<td>
+								<a href="#" ng-click="delete(person.personId);">delete</a>
+							</td>
+							<td>
+								<a href="#" ng-click="loadPerson(person.personId);">load</a>							
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</body>
+</html>
